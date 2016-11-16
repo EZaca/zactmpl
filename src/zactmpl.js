@@ -446,6 +446,7 @@
 
         // Prepare the sandbox. The sandbox will have access to the engine
         // version and some helper methods.
+        sandbox = sandbox || {};
         sandbox.__engine = __engine;
         sandbox.__next_loop_step = function(uuid){
             var last = buildInfo.lastIterator();
