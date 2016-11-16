@@ -47,59 +47,80 @@
      */
     function parseStatementHeader(template, settings, position){
         // We must only take care of the parenthesis.
-        var parenthesisCount = 1;
+        var parenthesisCount = 0;
         var open = false;
         var value = '';
 
-        // We'll run through all the template from the current position, finding
-        // the first open parenthesis and that which pairs with the first one.
-        var i;
-        for(i=position; i<template.length; i++){
-            // If we didn't find the first parenthesis yet, we must seek for it.
-            // The first parenthesis start on "(", but before it must be nothing
-            // but some space which is ignored by the trim. If there is some
-            // character not ignored by the trim, it isn't a space and, by the
-            // way, it will not lead to the parenthesis we are expecting. So,
-            // break before waste more time.
-            if (! open)
+        // Last system with indexOf was cool, but it had so many fails! Before
+        // we go to the code, we must take in mind the following rules:
+        //  1. The algorithm must get the header between the first `(` and its
+        //     corresponding `)`;
+        //     @stat( ... )
+        //  2. Only spaces can be before the first `(`;
+        //     @if       (...)
+        //  3. The header expression may have other parenthesis groups;
+        //     @for( var i in Array(1,2,3) )
+        //  4. The header expression may have a string with parenthesis;
+        //     @while( s === '(text' )
+        //  5. The header expression may have a RegExp with escaped parenthesis,
+        //     and the escaped ones must not be in pair to be valid;
+        //     @for(var i in (/\(/g).exec(text))
+        //     
+        // Now we have something to do! In the first line we define our complex
+        // expression that matches 0 or more characters of any type. After that,
+        // it try to get one of the possible groups. The last one is the end of
+        // input, and it will throw an error because there is no header, or the
+        // header was not closed.
+        // The groups 1 and 2 are related to the parenthesis itself. Other
+        // groups try to get commom ungrouped expressions that may have unpaired
+        // parenthesis, like String and RegExp.
+        // After, we get the next part while it can get.
+        //  - Open or not, it cannot hit the end of the input, because the header
+        // must be properly open and closed.
+        //  - Passing it, if the expression is open, the value is concatenated.
+        //  - If the caught text was `(`, it is the opening of a parenthesis,
+        //    and may be the first or any inner one.
+        //  - If it is `)`, some parenthesis was closed. If it was the last, it
+        //    returns the value. If it was never open, it throws. Otherwise, it
+        //    only add to the resulting text.
+        //  - If it was one of the another groups -- not the EOF, nor the `(` or
+        //    `)` -- it may be a string or regular expression, which should be
+        //    added to the resulting text.
+        // If the "while" expression fails, the header was not closed or never
+        // open, and an error will be thrown.
+        var r,regexp = /([\s\S]*?)("(?:\\"|[^"])*"|'(?:\\'|[^'])*'|(?:[^\w$]|^)\/(?:\\\/|[^\/])*\/|\/\*.*?\*\/|\/\/.*|\(|\)|(.)$)/g;
+        regexp.lastIndex = position;
+        while(r=regexp.exec(template))
+        {
+            if(r[3])
             {
-                if (template.charAt(i) === '(')
-                    open = true;
-                else
-                if (template.charAt(i).trim() !== '')
-                    break;
-                else
-                    continue;
+                throw new Error('Unexpected end of input. Unclosed statement condition');
             } else
-            // If we already have the first parenthesis, we must seek for that
-            // which matches it. We should return and stop the function once we
-            // found, because when the `for` loop ends, we are in trouble with
-            // the end of the file.
             {
-                if (template.charAt(i) === '(')
-                    parenthesisCount++;
-                else
-                if (template.charAt(i) === ')')
-                {
-                    parenthesisCount--;
-                    if (! parenthesisCount)
-                        return {'text':value.trim(), 'position':i+1};
+                if (open)
+                    value += r[1];
+                switch(r[2]){
+                    case '(':
+                        parenthesisCount++;
+                        if (open)
+                            value += '(';
+                        open = true;
+                        break;
+                    case ')':
+                        parenthesisCount--;
+                        if (! open)
+                            throw new Error('Expected (, but ) found');
+                        if (parenthesisCount == 0)
+                        {
+                            return {'text':value,'position':regexp.lastIndex};
+                        }
+                        value += ')';
+                        break;
+                    default: value += r[2];
                 }
-                
-                // Does not matter if the char is parenthesis or not, we add it.
-                // The first open parenthesis is not in this "else" block, and
-                // the final close parenthesis will return, so here are the
-                // inner characters and inner parenthesis.
-                value += template.charAt(i);
             }
         }
-
-        // At end, we see if the parenthesis was open in the loop. If it was
-        // open and the loop does not return, the parenthesis was never closed
-        // before EOF. Otherwise, there were no parenthesis at all.
-        if (open)
-            throw new Error('Unclosed parenthesis after character '+position);
-        return {'text':null,'position':position};
+        throw Error('Invalid statement condition');
     }
 
     /**
@@ -116,7 +137,7 @@
     function parseFragment(template, settings, tree, position, statType){
         // Let's start the regular expression to catch the nearest tag and some
         // text until that. The expression begins in the given position. 
-        var m,mainExp = /([\s\S]*?)(?:\\(@\w|@|<\?)|@(if|for|while|elseif|else|end[A-Za-z]*)|(<\?=|<\?\s+)|([\s\S])$)/guy;
+        var m,mainExp = /([\s\S]*?)(?:\\(\\|@\w|@|<\?|\n)|@(if|for|while|do|elseif|else|end[A-Za-z]*)|(<\?=|<\?\s+)|([\s\S])$)/guy;
         mainExp.lastIndex = position;
 
         // We'll recursively get the next nearest tag, some text until find the
@@ -129,10 +150,16 @@
             // Once it is short, we stacked the if-then, one per line.
             if (m[REG.TEXT] || m[REG.ESCAPE] || m[REG.LAST]) tree.ensureLast('text',{'value':''});
             if (m[REG.TEXT])   tree.last.value += m[REG.TEXT];
-            if (m[REG.ESCAPE]) tree.last.value += m[REG.ESCAPE];
             if (m[REG.LAST])   tree.last.value += m[REG.LAST];
             // Break if it was the last. After break we take care of last steps.
             if (m[REG.LAST])   break;
+            
+            // Escape may need some more attention
+            if(m[REG.ESCAPE])
+            switch (m[REG.ESCAPE]){
+                case '\n': break;
+                default: tree.last.value += m[REG.ESCAPE];
+            }
 
             // Now you may have put a <? or <?= tag to complicate the things, so
             // we take care of them.
@@ -500,7 +527,7 @@
         compile(template){
             // We should prepare the string, replace line breaks, remove tabs
             // and add a \n at end.
-            var s = String(template).replace(/\n\r?/g,'\n').replace(/\n$|$/,'\n').replace(/\t/g,'    ');
+            var s = String(template).replace(/\r\n?/g,'\n').replace(/\n$|$/,'\n').replace(/\t/g,'    ');
             // We will catch all blocks to the tree. The errors thrown obey the
             // rule where the "character \d+" inform the near of the error. You
             // can use a regular expression to replace this character info by
