@@ -1,0 +1,27 @@
+{
+  "name": "zactmpl",
+  "version": "0.0.1",
+  "description": "Provides a template system that mixes Javascript and text, where scripts are executed on a safe isolated context.",
+  "main": "src/zactmpl.js",
+  "scripts": {
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EZaca/zactmpl.git"
+  },
+  "keywords": [
+    "template",
+    "engine",
+    "nodejs",
+    "nw.js"
+  ],
+  "author": "Eliakim Zacarias",
+  "contributors":[
+     "Eliakim Zacarias <github.com/EZaca>"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/EZaca/zactmpl/issues"
+  },
+  "homepage": "https://github.com/EZaca/zactmpl#readme"
+}
