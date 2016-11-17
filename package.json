@@ -1,7 +1,7 @@
 {
   "name": "zactmpl",
   "version": "0.0.1",
-  "description": "Provides a template system that mixes Javascript and text, where scripts are executed on a safe isolated context.",
+  "description": "A template system to mix Javascript and text, running scripts on a sandboxed context.",
   "main": "src/zactmpl.js",
   "scripts": {
   },
