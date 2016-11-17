@@ -20,7 +20,11 @@ Planned features:
  - Middle step to include external texts.
 
 # Installation and Basic Steps
-NPM installation coming soon.
+To install the package you can use NPM:
+
+    npm install zactmpl
+
+We recommend to install it inside the project folder.
 
 Example of use:
 ````js
