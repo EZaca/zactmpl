@@ -37,6 +37,24 @@
     };
 
     /**
+     * This function get the expression you are running in the loop (maybe the
+     * main or a secondary) and a RegExp to cut off a piece of text. The
+     * function will move the cutExpression to the current position, get the
+     * text to ignore and, if any text was get, update the target expression
+     * lastIndex field.
+     * @param  {RegExp} targetRegexp  The RegExp of your loop.
+     * @param  {RegExp} cutExpression A new plain RegExp to cut from the text.
+     * @param  {String} template      The text you are working on.
+     */
+    function ignoreTextRxp(targetExpression, cutExpression, template){
+        if (! ( cutExpression.global && cutExpression.sticky && cutExpression.unicode))
+            throw new Error('The cut expression has not the "guy" flags (/.../guy) and may generate unexpected result');
+        cutExpression.lastIndex = targetExpression.lastIndex;
+        if (cutExpression.exec(template))
+            targetExpression.lastIndex = cutExpression.lastIndex;
+    }
+
+    /**
      * This function helps getting the header of a statement. See the catch of
      * the statements in parseFragment function to see it in use. Note this
      * function does not change the tree.
@@ -112,6 +130,14 @@
                             throw new Error('Expected (, but ) found');
                         if (parenthesisCount == 0)
                         {
+                            // It is the only statement that returns succefully.
+                            // All other flows throw errors with a short message
+                            // explaining what is wrong.
+                            // Now, this piece should ignore any break line to
+                            // prevent uglyfication of generated HTML. Remember
+                            // that only spaces and LF are allowed. Tabs and CR
+                            // was removed while starting.
+                            ignoreTextRxp(regexp, (/ *\n/guy), template);
                             return {'text':value,'position':regexp.lastIndex};
                         }
                         value += ')';
@@ -137,7 +163,7 @@
     function parseFragment(template, settings, tree, position, statType){
         // Let's start the regular expression to catch the nearest tag and some
         // text until that. The expression begins in the given position. 
-        var m,mainExp = /([\s\S]*?)(?:\\(\\|@\w|@|<\?|\n)|@(if|for|while|do|elseif|else|end[A-Za-z]*)|(<\?=|<\?\s+)|([\s\S])$)/guy;
+        var m,mainExp = /([\s\S]*?)(?:\\(\\|@\w|@|<\?|\n)| *@(if|for|while|do|elseif|else|end[A-Za-z]*)|(<\?=|<\?\s+)|([\s\S])$)/guy;
         mainExp.lastIndex = position;
 
         // We'll recursively get the next nearest tag, some text until find the
@@ -236,7 +262,7 @@
                     {
                         realEnd = 'if';
                         tree.leave();
-                    } else
+                    }
 
                     // If we are in a "do..while" statement, we not only must
                     // get an @endwhile instead of @enddo, but we need also get
@@ -248,7 +274,12 @@
                         let header = parseStatementHeader(template,settings,mainExp.lastIndex);
                         mainExp.lastIndex = header.position;
                         tree.current.header = header.text;
-                    }
+                    } else
+                    // If the statement does not require header, it may still
+                    // have a pure line with only whitespaces before the break.
+                    // So, we remove it to prevent uglify of HTML with weird
+                    // empty lines everywhere.
+                        ignoreTextRxp(mainExp, (/ *\n/guy), template);
 
                     // Let's see the good long form, @endif, @endwhile, which
                     // prevent us to mess with the blocks, closing an wrong one
@@ -306,7 +337,12 @@
                         throw new Error('Expecting ( at character '+mainExp.lastIndex);
                     mainExp.lastIndex = header.position;
                     tree.current.header = header.text;
-                }
+                } else
+                // If the statement does not require header, there is one more
+                // thing to do: remove the remaining space until a line break,
+                // or maintain the line whether it is not composed only by white
+                // spaces.
+                    ignoreTextRxp(mainExp, (/ *\n/guy), template);
 
                 // And the next statements, with or without header, will need to
                 // consume a block of children items until "@end". Rembember we
