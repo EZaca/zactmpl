@@ -1,0 +1,189 @@
+
+== TEST ALL ==
+This "multiline plain unicode" template get three variables
+in its global scope. One custom variable, which is a simple
+string; a function (func); and an interface to the console
+(log), being the console whatever it means in the context
+where it was called (it may be the Terminal or the DevTools
+Console).
+
+Below are some test of the ZacTemplate Engine.
+
+== INDENT ==
+Line 1;
+Line 2;
+    Line 3 indented with 4 spaces;
+Line 4;
+@if(true)
+    Line 5 indented with 5 spaces;
+@endif
+Line 6;
+Line 7;
+    @if(true)
+    Line 8 indented with 4 spaces;
+    @endif
+    Line 9 indented with 4 spaces;
+Line 10;
+
+== SCRIPTS ==
+Nothing should be print: <? "Some text" ?>
+Custom variable with `print`: <? print(custom) ?>
+Custom variable returned: <?= custom ?>
+Function call, returned: <?= func() ?>
+
+== PLANNED FEATURE: Angular Style ==
+Custom variable: {{ custom }} [expected to not work]
+
+== ESCAPING ==
+\@if(I will appear)\@endif
+MUST NOT show the backslash: \@a
+MUST NOT show the backslash: \@
+MUST show the backslash: \5
+MUST show only one backslash: \\
+This MUST be\
+ a line without\
+ breaks.
+
+== STATEMENT ==
+Normal end test...
+@if(false) This MUST NOT be printed. @endif\
+@for(var hidden in []) This MUST NOT be printed. @endfor\
+@while(false) This MUST NOT be printed. @endwhile\
+@do This MUST be printed once. @endwhile(false)
+
+Glued start and end...
+@if(false)@endif
+Short end test...
+@if(false) This MUST NOT be printed. @end\
+@for(var hidden in []) This MUST NOT be printed. @end\
+@while(false) This MUST NOT be printed. @end\
+No errors thrown.
+
+== IF ==
+Simple:
+@if(true)
+    This MUST be printed.
+@else
+    This MUST NOT be printed.
+@endif
+
+Else:
+@if(false)
+    This MUST NOT be printed.
+@else
+    This MUST be printed.
+@endif
+
+ElseIf:
+@if(false)
+    This MUST NOT be printed.
+@elseif(false)
+    This MUST NOT be printed.
+@elseif(true)
+    This MUST be printed.
+@elseif(true)
+    This MUST NOT be printed.
+@else
+    This MUST NOT be printed.
+@endif
+
+ElseIf-Else:
+@if(false)
+    This MUST NOT be printed.
+@elseif(false)
+    This MUST NOT be printed.
+@else
+    This MUST be printed.
+@endif
+
+== FOR ==
+<? numbers=[1,2,3] ?>\
+
+Count to three with normal FOR:
+@for(var i=1; i<=3; i++)
+    Counting <?= i ?>...
+@endfor
+
+List three items in FOR-IN:
+@for(i in numbers)
+    Counting <?= numbers[i] ?>...
+@endfor
+
+List three items with subparenthesis:
+@for(i in (numbers))
+    Counting <?= numbers[i] ?>...
+@endfor
+
+For with string and regexp containing parenthesis:
+@for(i in [')',")",'(',"("/*(*/,/\(/g,Number(5)] )
+    Element index <?= Number(i)+1 ?>...
+@endfor
+(This test applies to all statements with parenthesis, including if, while, do)
+
+Stop on number 2:
+@for(i=1; i<=3; i++)
+    @if(i==2)
+        @break [If you see this text, it is still not implemented]
+    @else
+        Counting <?= i ?>...
+    @endif
+@endfor
+
+Ignore number 2:
+@for(i=1; i<=3; i++)
+    @if(i==2)
+        @continue [If you see this text, it is still not implemented]
+    @else
+        Counting <?= i ?>...
+    @endif
+@endfor
+
+== WHILE ==
+
+Simple while:
+<? var wi = 0; ?>\
+@while(++wi <= 3)
+    Counting <?=wi?>...
+@endwhile
+
+Simple while jumps 2 and stop on 6:
+<? var wi = 0; ?>\
+@while(++wi <= 7)
+    @if(wi === 2)
+        @continue 2 [If you see this text, it is still not implemented]
+    @elseif(wi === 6)
+        @break 6 [If you see this text, it is still not implemented]
+    @else
+        Counting <?=wi?>...
+    @endif
+@endwhile
+
+== DO-WHILE ==
+
+Simple do-while:
+<? var wi = 1; ?>\
+@do
+    Counting <? print(wi) ?>...
+@endwhile(++wi <= 5)
+
+Simple do-while:
+<? var wi = 1; ?>\
+@do
+    @if(wi === 2)
+        @continue 2 [If you see this text, it is still not implemented]
+    @elseif(wi === 6)
+        @break 6 [If you see this text, it is still not implemented]
+    @else
+        Counting <?=wi?>...
+    @endif
+@endwhile(++wi <= 7)
+
+== END OF TEST ==
+
+If you have reached this point without errors or unexpected
+results, it is (probably) ready to publish!
+
+You may add additional test of features when they are added,
+of there is something missing.
+
+Great work!
