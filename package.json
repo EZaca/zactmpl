@@ -1,6 +1,6 @@
 {
   "name": "zactmpl",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "A template system to mix Javascript and text, running scripts on a sandboxed context.",
   "main": "src/zactmpl.js",
   "scripts": {},
