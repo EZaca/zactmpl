@@ -1,6 +1,6 @@
 (function(){
 
-    var __engine = 'ZacTemplate Engine 0.0.1';
+    var __engine = 'ZacTemplate Engine 0.0.4';
 
 // -------------------------------------------------------------------------
 // Reading the source
@@ -523,7 +523,8 @@
         };
         sandbox.print = function(text){ buildInfo.content += String(text); };
         sandbox.clear = function(text){ buildInfo.content = ''; };
-        vm.createContext(sandbox);
+        if(! vm.isContext(sandbox))
+            vm.createContext(sandbox);
 
         buildFromNode(buildInfo, tree, sandbox, tree.root);
         return String(buildInfo.content);
