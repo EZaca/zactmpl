@@ -1,6 +1,6 @@
 # ZacTemplate Engine
 
-    Status: Beta
+    Status: Frozen/Abandoned
     Contributors: see package.json file
     License: MIT (see LICENSE file)
     Since: November 14th, 2016.
